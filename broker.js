@@ -12,20 +12,35 @@ app.use(bp.urlencoded({extended:true}));
 
 var deviceName = "RaspberryPi4B";
 
+var jsonConnectedDevices = {}
+var name = 'DeviceName'
+var connectedDevices = 'ConnectedDevices'
+jsonConnectedDevices[name] = deviceName
+jsonConnectedDevices[connectedDevices] = []
+
 app.post("/register", function(req, res){
     var body = req.body;
+    var toAdd = true;
     console.log(body);
     if(body.AuthToken == "TEST"){
-        res.json({
-            "DeviceName": "RaspberryPi4B",
-            "ConnectedDevices": [
-            {"Type": "TemperatureSensor","Topic": "TempSens", "View": "Text"},
-            {"Type": "HumiditySensor","Topic": "HumSens", "View": "Text"},
-            {"Type": "CameraSensor","Topic": "CamSens", "View": "Text"},
-            {"Type": "MotionSensor","Topic": "MotSens", "View": "Text"},
-            {"Type": "dupaSensor","Topic": "dupaDupa", "View": "Text"}
-            ]
-        })
+        if(body.MqttType == "Publisher"){
+            if(jsonConnectedDevices[connectedDevices]){
+                jsonConnectedDevices[connectedDevices].forEach(element => {
+                if(element.Topic == body.Device.Topic){
+                    toAdd = false
+                }
+            });
+            }
+            if(toAdd){
+                jsonConnectedDevices[connectedDevices].push(body.Device)
+            }
+            res.send("Done")
+        }
+        else if(body.MqttType == "Viewer"){
+            var test = JSON.stringify(jsonConnectedDevices)
+            console.log(test)
+            res.send(test)            
+        }
     }
     else{
         res.json({
@@ -50,6 +65,8 @@ broker.on('ready', ()=>{
 
 broker.on('published', (packet)=>{
     message = packet.payload.toString()
+    topic = packet.topic.toString()
+    console.log(topic)
     console.log(message)
+    console.log(broker.clients.toString())
 })
-
